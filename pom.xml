@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.TryNotDying</groupId>
     <artifactId>Sinon</artifactId>
-    <version>v0.0.6b</version>
+    <version>v0.0.7b</version>
     <packaging>jar</packaging>
 
     <repositories>
