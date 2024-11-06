@@ -239,6 +239,7 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
             mb.append(FormatUtil.filter(manager.getBot().getConfig().getSuccess()+" **Now Playing in "+guild.getSelfMember().getVoiceState().getChannel().getAsMention()+"...**"));
             EmbedBuilder eb = new EmbedBuilder();
             eb.setColor(guild.getSelfMember().getColor());
+            eb.setThumbnail("https://i.ytimg.com/vi/"+track.getIdentifier()+"/hqdefault.jpg");
             RequestMetadata rm = getRequestMetadata();
             if(rm.getOwner() != 0L)
             {
@@ -246,7 +247,7 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
                 if(u==null)
                     eb.setAuthor(FormatUtil.formatUsername(rm.user), null, rm.user.avatar);
                 else
-                    eb.setAuthor(FormatUtil.formatUsername(u), null, u.getEffectiveAvatarUrl());
+                    eb.setAuthor("Requested By: " + FormatUtil.formatUsername(u), null, u.getEffectiveAvatarUrl());
             }
 
             try 
@@ -260,7 +261,7 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
 
             if(track instanceof YoutubeAudioTrack && manager.getBot().getConfig().useNPImages())
             {
-                eb.setThumbnail("https://img.youtube.com/vi/"+track.getIdentifier()+"/mqdefault.jpg");
+                eb.setThumbnail("https://i.ytimg.com/vi/"+track.getIdentifier()+"/hqdefault.jpg");
             }
             
             if(track.getInfo().author != null && !track.getInfo().author.isEmpty())
