@@ -17,50 +17,44 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import com.TryNotDying.Sinon.settings.Settings;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 
 /**
  * Above import dependencies
  * Below is the default playlist command
  */
-public class AutoplaylistCmd extends OwnerCommand
-{
+public class AutoplaylistCmd extends OwnerCommand {
     private final Bot bot;
-    
-    public AutoplaylistCmd(Bot bot)
-    {
+
+    public AutoplaylistCmd(Bot bot) {
+        super(bot);
         this.bot = bot;
-        this.guildOnly = true;
         this.name = "autoplaylist";
-        this.arguments = "<name|NONE>";
         this.help = "sets the default playlist for the server";
-        this.aliases = bot.getConfig().getAliases(this.name);
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("playlist", "Playlist name (or NONE to clear)", OptionType.STRING, true)
+        };
     }
 
     @Override
-    public void execute(CommandEvent event) 
-    {
-        if(event.getArgs().isEmpty())
-        {
-            event.reply(event.getClient().getError()+" Please include a playlist name or NONE");
-            return;
-        }
-        if(event.getArgs().equalsIgnoreCase("none"))
-        {
+    protected void doCommand(CommandEvent event) {
+        String pname = event.getOption("playlist").getAsString();
+        if (pname.equalsIgnoreCase("none")) {
             Settings settings = event.getClient().getSettingsFor(event.getGuild());
             settings.setDefaultPlaylist(null);
-            event.reply(event.getClient().getSuccess()+" Cleared the default playlist for **"+event.getGuild().getName()+"**");
+            event.reply(event.getClient().getSuccess() + " Cleared the default playlist for **" + event.getGuild().getName() + "**");
             return;
         }
-        String pname = event.getArgs().replaceAll("\\s+", "_");
-        if(bot.getPlaylistLoader().getPlaylist(pname)==null)
-        {
-            event.reply(event.getClient().getError()+" Could not find `"+pname+".txt`!");
-        }
-        else
-        {
+        pname = pname.replaceAll("\\s+", "_");
+        if (bot.getPlaylistLoader().getPlaylist(pname) == null) {
+            event.reply(event.getClient().getError() + " Could not find `" + pname + ".txt`!");
+        } else {
             Settings settings = event.getClient().getSettingsFor(event.getGuild());
             settings.setDefaultPlaylist(pname);
-            event.reply(event.getClient().getSuccess()+" The default playlist for **"+event.getGuild().getName()+"** is now `"+pname+"`");
+            event.reply(event.getClient().getSuccess() + " The default playlist for **" + event.getGuild().getName() + "** is now `" + pname + "`");
         }
     }
 }

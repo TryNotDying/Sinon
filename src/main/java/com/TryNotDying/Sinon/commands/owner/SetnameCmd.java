@@ -17,38 +17,37 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import net.dv8tion.jda.api.exceptions.RateLimitedException;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 
 /**
  * Above import dependencies
  * Below is the set name command
  */
-public class SetnameCmd extends OwnerCommand
-{
-    public SetnameCmd(Bot bot)
-    {
+public class SetnameCmd extends OwnerCommand {
+
+    public SetnameCmd(Bot bot) {
+        super(bot);
         this.name = "setname";
         this.help = "changes the name of Sinon";
-        this.arguments = "<name>";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.guildOnly = false;
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("name", "New name for the bot", OptionType.STRING, true)
+        };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
-        try 
-        {
+    protected void doCommand(CommandEvent event) {
+        try {
             String oldname = event.getSelfUser().getName();
-            event.getSelfUser().getManager().setName(event.getArgs()).complete(false);
-            event.reply(event.getClient().getSuccess()+" Name changed from `"+oldname+"` to `"+event.getArgs()+"`");
-        } 
-        catch(RateLimitedException e) 
-        {
-            event.reply(event.getClient().getError()+" Bot names can only be changed twice per hour!");
-        }
-        catch(Exception e) 
-        {
-            event.reply(event.getClient().getError()+" That name is not valid!");
+            String newName = event.getOption("name").getAsString();
+            event.getSelfUser().getManager().setName(newName).complete(false);
+            event.reply(event.getClient().getSuccess() + " Name changed from `" + oldname + "` to `" + newName + "`");
+        } catch (RateLimitedException e) {
+            event.reply(event.getClient().getError() + " Bot names can only be changed twice per hour!");
+        } catch (Exception e) {
+            event.reply(event.getClient().getError() + " That name is not valid!");
         }
     }
 }

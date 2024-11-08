@@ -22,34 +22,34 @@ import com.sedmelluq.discord.lavaplayer.tools.PlayerLibrary;
 import net.dv8tion.jda.api.JDAInfo;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.ChannelType;
+import com.jagrosh.jdautilities.command.SlashCommand;
 
 /**
  * Above import dependencies
  * Below is the Debug command
  */
-public class DebugCmd extends OwnerCommand 
-{
-    private final static String[] PROPERTIES = {"java.version", "java.vm.name", "java.vm.specification.version", 
+public class DebugCmd extends OwnerCommand {
+    private final static String[] PROPERTIES = {"java.version", "java.vm.name", "java.vm.specification.version",
         "java.runtime.name", "java.runtime.version", "java.specification.version",  "os.arch", "os.name"};
-    
+
     private final Bot bot;
-    
-    public DebugCmd(Bot bot)
-    {
+
+    public DebugCmd(Bot bot) {
+        super(bot);
         this.bot = bot;
         this.name = "debug";
         this.help = "shows debug info";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.guildOnly = false;
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
     }
 
     @Override
-    protected void execute(CommandEvent event)
-    {
+    protected void doCommand(CommandEvent event) {
         StringBuilder sb = new StringBuilder();
         sb.append("```\nSystem Properties:");
-        for(String key: PROPERTIES)
+        for (String key : PROPERTIES) {
             sb.append("\n  ").append(key).append(" = ").append(System.getProperty(key));
+        }
         sb.append("\n\nSinon Information:")
                 .append("\n  Version = ").append(OtherUtil.getCurrentVersion())
                 .append("\n  Owner = ").append(bot.getConfig().getOwnerId())
@@ -75,11 +75,12 @@ public class DebugCmd extends OwnerCommand
                 .append("\n  Guilds = ").append(event.getJDA().getGuildCache().size())
                 .append("\n  Users = ").append(event.getJDA().getUserCache().size());
         sb.append("\n```");
-        
-        if(event.isFromType(ChannelType.PRIVATE) 
-                || event.getSelfMember().hasPermission(event.getTextChannel(), Permission.MESSAGE_ATTACH_FILES))
+
+        if (event.isFromType(ChannelType.PRIVATE)
+                || event.getSelfMember().hasPermission(event.getTextChannel(), Permission.MESSAGE_ATTACH_FILES)) {
             event.getChannel().sendFile(sb.toString().getBytes(), "debug_information.txt").queue();
-        else
+        } else {
             event.reply("Debug Information: " + sb.toString());
+        }
     }
 }

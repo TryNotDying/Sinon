@@ -18,29 +18,52 @@ import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.settings.Settings;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Role;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import com.jagrosh.jdautilities.command.CommandEvent;
+import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.settings.Settings;
+import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.Member;
+import java.util.List;
 
 /**
  * Above import dependencies
  * Below is the DJ command
  */
-public abstract class DJCommand extends MusicCommand
-{
-    public DJCommand(Bot bot)
-    {
+public abstract class DJCommand extends SlashMusicCommand {
+
+    public DJCommand(Bot bot) {
         super(bot);
-        this.category = new Category("DJ", event -> checkDJPermission(event));
+        this.category = new Category("DJ");
     }
-    
-    public static boolean checkDJPermission(CommandEvent event)
-    {
-        if(event.getAuthor().getId().equals(event.getClient().getOwnerId()))
-            return true;
-        if(event.getGuild()==null)
-            return true;
-        if(event.getMember().hasPermission(Permission.MANAGE_SERVER))
-            return true;
-        Settings settings = event.getClient().getSettingsFor(event.getGuild());
-        Role dj = settings.getRole(event.getGuild());
-        return dj!=null && (event.getMember().getRoles().contains(dj) || dj.getIdLong()==event.getGuild().getIdLong());
+
+    @Override
+    protected void execute(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
+            return;
+        }
+
+        // Check if the user has the admin role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getAdminRoleId()) {
+                // Call the doCommand method to implement your specific logic.
+                doCommand(event);
+                return; // Allow the user
+            }
+        }
+
+        // If the user doesn't have the admin role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
+
+    // Implement your specific command logic in the doCommand method.
+    protected abstract void doCommand(CommandEvent event);
 }

@@ -26,104 +26,116 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.entities.Message;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Ablove import dependencies
  * Below is the command that will play a song next and skip the current queue
  */
-public class PlaynextCmd extends DJCommand
-{
+public class PlaynextCmd extends SlashDJCommand {
     private final String loadingEmoji;
-    
-    public PlaynextCmd(Bot bot)
-    {
+
+    public PlaynextCmd(Bot bot) {
         super(bot);
         this.loadingEmoji = bot.getConfig().getLoading();
         this.name = "playnext";
-        this.arguments = "<title|URL>";
         this.help = "plays a single song next";
         this.aliases = bot.getConfig().getAliases(this.name);
-        this.beListening = true;
-        this.bePlaying = false;
+        this.category = new Category("DJ");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("song", "Song name or URL", OptionType.STRING, true)
+        };
     }
-    
+
     @Override
-    public void doCommand(CommandEvent event)
-    {
-        if(event.getArgs().isEmpty() && event.getMessage().getAttachments().isEmpty())
-        {
-            event.replyWarning("Please include a song title or URL!");
+    protected void doCommand(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
             return;
         }
-        String args = event.getArgs().startsWith("<") && event.getArgs().endsWith(">") 
-                ? event.getArgs().substring(1,event.getArgs().length()-1) 
-                : event.getArgs().isEmpty() ? event.getMessage().getAttachments().get(0).getUrl() : event.getArgs();
-        event.reply(loadingEmoji+" Loading... `["+args+"]`", m -> bot.getPlayerManager().loadItemOrdered(event.getGuild(), args, new ResultHandler(m,event,false)));
+
+        // Check if the user has the DJ role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getDjRoleId()) {
+                String args = event.getOption("song").getAsString();
+                event.reply(loadingEmoji + " Loading... `[" + args + "]`", m -> bot.getPlayerManager().loadItemOrdered(event.getGuild(), args, new ResultHandler(m, event, false)));
+                return; // Allow the user
+            }
+        }
+
+        // If the user doesn't have the DJ role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
-    
-    private class ResultHandler implements AudioLoadResultHandler
-    {
+
+    private class ResultHandler implements AudioLoadResultHandler {
         private final Message m;
         private final CommandEvent event;
         private final boolean ytsearch;
-        
-        private ResultHandler(Message m, CommandEvent event, boolean ytsearch)
-        {
+
+        private ResultHandler(Message m, CommandEvent event, boolean ytsearch) {
             this.m = m;
             this.event = event;
             this.ytsearch = ytsearch;
         }
-        
-        private void loadSingle(AudioTrack track)
-        {
-            if(bot.getConfig().isTooLong(track))
-            {
-                m.editMessage(FormatUtil.filter(event.getClient().getWarning()+" This track (**"+track.getInfo().title+"**) is longer than the allowed maximum: `"
-                        + TimeUtil.formatTime(track.getDuration())+"` > `"+ TimeUtil.formatTime(bot.getConfig().getMaxSeconds()*1000)+"`")).queue();
+
+        private void loadSingle(AudioTrack track) {
+            if (bot.getConfig().isTooLong(track)) {
+                m.editMessage(FormatUtil.filter(event.getClient().getWarning() + " This track (**" + track.getInfo().title + "**) is longer than the allowed maximum: `"
+                        + TimeUtil.formatTime(track.getDuration()) + "` > `" + TimeUtil.formatTime(bot.getConfig().getMaxSeconds() * 1000) + "`")).queue();
                 return;
             }
-            AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-            int pos = handler.addTrackToFront(new QueuedTrack(track, RequestMetadata.fromResultHandler(track, event)))+1;
-            String addMsg = FormatUtil.filter(event.getClient().getSuccess()+" Added **"+track.getInfo().title
-                    +"** (`"+ TimeUtil.formatTime(track.getDuration())+"`) "+(pos==0?"to begin playing":" to the queue at position "+pos));
+            AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
+            int pos = handler.addTrackToFront(new QueuedTrack(track, RequestMetadata.fromResultHandler(track, event))) + 1;
+            String addMsg = FormatUtil.filter(event.getClient().getSuccess() + " Added **" + track.getInfo().title
+                    + "** (`" + TimeUtil.formatTime(track.getDuration()) + "`) " + (pos == 0 ? "to begin playing" : " to the queue at position " + pos));
             m.editMessage(addMsg).queue();
         }
-        
+
         @Override
-        public void trackLoaded(AudioTrack track)
-        {
+        public void trackLoaded(AudioTrack track) {
             loadSingle(track);
         }
 
         @Override
-        public void playlistLoaded(AudioPlaylist playlist)
-        {
+        public void playlistLoaded(AudioPlaylist playlist) {
             AudioTrack single;
-            if(playlist.getTracks().size()==1 || playlist.isSearchResult())
-                single = playlist.getSelectedTrack()==null ? playlist.getTracks().get(0) : playlist.getSelectedTrack();
-            else if (playlist.getSelectedTrack()!=null)
+            if (playlist.getTracks().size() == 1 || playlist.isSearchResult()) {
+                single = playlist.getSelectedTrack() == null ? playlist.getTracks().get(0) : playlist.getSelectedTrack();
+            } else if (playlist.getSelectedTrack() != null) {
                 single = playlist.getSelectedTrack();
-            else
+            } else {
                 single = playlist.getTracks().get(0);
+            }
             loadSingle(single);
         }
 
         @Override
-        public void noMatches()
-        {
-            if(ytsearch)
-                m.editMessage(FormatUtil.filter(event.getClient().getWarning()+" No results found for `"+event.getArgs()+"`.")).queue();
-            else
-                bot.getPlayerManager().loadItemOrdered(event.getGuild(), "ytsearch:"+event.getArgs(), new ResultHandler(m,event,true));
+        public void noMatches() {
+            if (ytsearch) {
+                m.editMessage(FormatUtil.filter(event.getClient().getWarning() + " No results found for `" + event.getArgs() + "`.")).queue();
+            } else {
+                bot.getPlayerManager().loadItemOrdered(event.getGuild(), "ytsearch:" + event.getArgs(), new ResultHandler(m, event, true));
+            }
         }
 
         @Override
-        public void loadFailed(FriendlyException throwable)
-        {
-            if(throwable.severity==FriendlyException.Severity.COMMON)
-                m.editMessage(event.getClient().getError()+" Error loading: "+throwable.getMessage()).queue();
-            else
-                m.editMessage(event.getClient().getError()+" Error loading track.").queue();
+        public void loadFailed(FriendlyException throwable) {
+            if (throwable.severity == FriendlyException.Severity.COMMON) {
+                m.editMessage(event.getClient().getError() + " Error loading: " + throwable.getMessage()).queue();
+            } else {
+                m.editMessage(event.getClient().getError() + " Error loading track.").queue();
+            }
         }
     }
 }

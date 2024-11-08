@@ -21,48 +21,59 @@ import com.TryNotDying.Sinon.commands.AdminCommand;
 import com.TryNotDying.Sinon.settings.Settings;
 import com.TryNotDying.Sinon.utils.FormatUtil;
 import net.dv8tion.jda.api.entities.TextChannel;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Above import dependencies
  * Below is the Set Channel Command
  */
-public class SettcCmd extends AdminCommand 
-{
-    public SettcCmd(Bot bot)
-    {
+public class SettcCmd extends SlashAdminCommand {
+
+    public SettcCmd(Bot bot) {
+        super(bot);
         this.name = "settc";
         this.help = "sets the text channel for music commands";
-        this.arguments = "<channel|NONE>";
-        this.aliases = bot.getConfig().getAliases(this.name);
+        this.category = new Category("Admin");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("channel", "Text channel name (or NONE to clear)", OptionType.CHANNEL, true)
+        };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
-        if(event.getArgs().isEmpty())
-        {
-            event.reply(event.getClient().getError()+" Please include a text channel or NONE");
+    protected void doCommand(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
             return;
         }
-        Settings s = event.getClient().getSettingsFor(event.getGuild());
-        if(event.getArgs().equalsIgnoreCase("none"))
-        {
-            s.setTextChannel(null);
-            event.reply(event.getClient().getSuccess()+" Music commands can now be used in any channel");
-        }
-        else
-        {
-            List<TextChannel> list = FinderUtil.findTextChannels(event.getArgs(), event.getGuild());
-            if(list.isEmpty())
-                event.reply(event.getClient().getWarning()+" No Text Channels found matching \""+event.getArgs()+"\"");
-            else if (list.size()>1)
-                event.reply(event.getClient().getWarning()+FormatUtil.listOfTChannels(list, event.getArgs()));
-            else
-            {
-                s.setTextChannel(list.get(0));
-                event.reply(event.getClient().getSuccess()+" Music commands can now only be used in <#"+list.get(0).getId()+">");
+
+        // Check if the user has the admin role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getAdminRoleId()) {
+                TextChannel channel = event.getOption("channel").getAsTextChannel();
+                Settings s = event.getClient().getSettingsFor(event.getGuild());
+                if (channel == null) {
+                    s.setTextChannel(null);
+                    event.reply(event.getClient().getSuccess() + " Music commands can now be used in any channel");
+                } else {
+                    s.setTextChannel(channel);
+                    event.reply(event.getClient().getSuccess() + " Music commands can now only be used in <#" + channel.getId() + ">");
+                }
+                return; // Allow the user
             }
         }
+
+        // If the user doesn't have the admin role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
-    
 }

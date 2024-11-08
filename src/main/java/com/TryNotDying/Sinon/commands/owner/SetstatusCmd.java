@@ -17,38 +17,39 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import net.dv8tion.jda.api.OnlineStatus;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 
 /**
  * Above import dependencies
  * Below is the set status command
  */
-public class SetstatusCmd extends OwnerCommand
-{
-    public SetstatusCmd(Bot bot)
-    {
+public class SetstatusCmd extends OwnerCommand {
+
+    public SetstatusCmd(Bot bot) {
+        super(bot);
         this.name = "setstatus";
         this.help = "sets the status Sinon displays";
-        this.arguments = "<status>";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.guildOnly = false;
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("status", "New status for the bot", OptionType.STRING, true)
+        };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
+    protected void doCommand(CommandEvent event) {
         try {
-            OnlineStatus status = OnlineStatus.fromKey(event.getArgs());
-            if(status==OnlineStatus.UNKNOWN)
-            {
+            String status = event.getOption("status").getAsString();
+            OnlineStatus onlineStatus = OnlineStatus.fromKey(status);
+            if (onlineStatus == OnlineStatus.UNKNOWN) {
                 event.replyError("Please include one of the following statuses: `ONLINE`, `IDLE`, `DND`, `INVISIBLE`, `STREAMING`, `PLAYING`");
+            } else {
+                event.getJDA().getPresence().setStatus(onlineStatus);
+                event.replySuccess("Set the status to `" + onlineStatus.getKey().toUpperCase() + "`");
             }
-            else
-            {
-                event.getJDA().getPresence().setStatus(status);
-                event.replySuccess("Set the status to `"+status.getKey().toUpperCase()+"`");
-            }
-        } catch(Exception e) {
-            event.reply(event.getClient().getError()+" The status could not be set!");
+        } catch (Exception e) {
+            event.reply(event.getClient().getError() + " The status could not be set!");
         }
     }
 }

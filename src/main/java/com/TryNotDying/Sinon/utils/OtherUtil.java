@@ -15,12 +15,20 @@ package com.TryNotDying.Sinon.utils;
 
 import com.TryNotDying.Sinon.sinon;
 import com.TryNotDying.Sinon.entities.Prompt;
-import java.io.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory; //Import this line
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.io.File;
+import java.util.Scanner;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.OnlineStatus;
@@ -43,7 +51,7 @@ public class OtherUtil
                     + "New Version: %s\n\n"
                     + "Please visit https://github.com/TryNotDying/Sinon/releases/latest to get the latest release.";
     private final static String WINDOWS_INVALID_PATH = "c:\\windows\\system32\\";
-    
+    private static final Logger LOGGER = LoggerFactory.getLogger(OtherUtil.class); // Initialize LOGGER here
     /**
      * gets a Path from a String
      * also fixes the windows tendency to try to start in system32
@@ -52,17 +60,17 @@ public class OtherUtil
      * @param path the string path
      * @return the Path object
      */
-    public static Path getPath(String path)
-    {
+    public static Path getPath(String path) {
         Path result = Paths.get(path);
         // special logic to prevent trying to access system32
-        if(result.toAbsolutePath().toString().toLowerCase().startsWith(WINDOWS_INVALID_PATH))
-        {
-            try
-            {
-                result = Paths.get(new File(sinon.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile().getPath() + File.separator + path);
+        if (result.toAbsolutePath().toString().toLowerCase().startsWith(WINDOWS_INVALID_PATH)) {
+            try {
+                //This line assumes your code is in a jar file. Adjust if not the case.
+                result = Paths.get(new File(OtherUtil.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile().getPath() + File.separator + path);
+            } catch (URISyntaxException | NullPointerException ignored) {
+                // Handle the exception appropriately – perhaps log it or throw a custom exception.
+                System.err.println("Error getting path: " + ignored.getMessage());
             }
-            catch(URISyntaxException ignored) {}
         }
         return result;
     }
@@ -74,18 +82,27 @@ public class OtherUtil
      * @param name name of resource
      * @return string containing the contents of the resource
      */
-    public static String loadResource(Object clazz, String name)
-    {
-        try(BufferedReader reader = new BufferedReader(new InputStreamReader(clazz.getClass().getResourceAsStream(name))))
-        {
-            StringBuilder sb = new StringBuilder();
-            reader.lines().forEach(line -> sb.append("\r\n").append(line));
-            return sb.toString().trim();
-        }
-        catch(IOException ignored)
-        {
+    public static String loadResource(String resourcePath) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        Scanner scanner = null; // Declare scanner outside the try block
+        try (InputStream inputStream = classLoader.getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                return null;
+            }
+            scanner = new Scanner(inputStream, StandardCharsets.UTF_8); // Create scanner inside the try block
+            return scanner.useDelimiter("\\A").next(); // Read the entire stream 
+        } catch (IOException e) {
+            LOGGER.error("Error loading resource '{}': {}", resourcePath, e.getMessage(), e); // Use SLF4j
             return null;
+        } finally {
+            if (scanner != null) {
+                scanner.close(); // Close the scanner in the finally block
+            }
         }
+    }
+
+    public static Path getPath(String pathString) {
+        return Paths.get(pathString);
     }
     
     /**

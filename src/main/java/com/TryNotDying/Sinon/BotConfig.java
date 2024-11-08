@@ -19,57 +19,56 @@ import com.TryNotDying.Sinon.utils.TimeUtil;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.typesafe.config.*;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Above import dependencies
  * Below is the bot configuration file system
  */
-public class BotConfig
-{
+public class BotConfig {
     private final Prompt prompt;
     private final static String CONTEXT = "Config";
     private final static String START_TOKEN = "/// START OF Sinon CONFIG ///";
     private final static String END_TOKEN = "/// END OF Sinon CONFIG ///";
-    
+
     private Path path = null;
     private String token, prefix, altprefix, helpWord, playlistsFolder, logLevel,
             successEmoji, warningEmoji, errorEmoji, loadingEmoji, searchingEmoji,
-            evalEngine;
+            evalEngine, SCApi; // Added SCApi variable
     private boolean youtubeOauth2, stayInChannel, songInGame, npImages, updatealerts, useEval, dbots;
-    private long owner, maxSeconds, aloneTimeUntilStop;
+    private long owner, maxSeconds, aloneTimeUntilStop, verifiedMemberRoleId, djRoleId, adminRoleId; // Add verifiedMemberRoleId, djRoleId, adminRoleId
     private int maxYTPlaylistPages;
     private double skipratio;
     private OnlineStatus status;
     private Activity game;
     private Config aliases, transforms;
-
     private boolean valid = false;
-    
-    public BotConfig(Prompt prompt)
-    {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BotConfig.class);
+
+    public BotConfig(Prompt prompt) {
         this.prompt = prompt;
     }
-    
-    public void load()
-    {
+
+    public void load() throws BotConfigException { // Throw custom exception
         valid = false;
         
         // read config from file
-        try 
-        {
+        try {
             // get the path to the config, default config.txt
             path = getConfigPath();
-            
+
             // load in the config file, plus the default values
-            //Config config = ConfigFactory.parseFile(path.toFile()).withFallback(ConfigFactory.load());
             Config config = ConfigFactory.load();
-            
+
             // set values
-            token = config.getString("token");
+            token = getSCApi(config); // Load token using getSCApi
             prefix = config.getString("prefix");
             altprefix = config.getString("altprefix");
             helpWord = config.getString("help");
@@ -97,291 +96,269 @@ public class BotConfig
             transforms = config.getConfig("transforms");
             skipratio = config.getDouble("skipratio");
             dbots = owner == 547080973498449934L;
-            
+            SCApi = config.hasPath("scapi") ? config.getString("scapi") : ""; //Safe retrieval of SCApi
+
             // we may need to write a new config file
             boolean write = false;
-
-            // validate bot token
-            if(token==null || token.isEmpty() || token.equalsIgnoreCase("BOT_TOKEN_HERE"))
-            {
-                token = prompt.prompt("Hello, I'm Sinon! Hold up one sec!"
-                        + "\nI just realized you didn't put it in me! Your bot token you"
-                        + "\nPERVERT!!! Get one from the Discord Developer Applications."
-                        + "\nBot Token: ");
-                if(token==null)
-                {
-                    prompt.alert(Prompt.Level.WARNING, CONTEXT, "No token provided! Exiting.\n\nConfig Location: " + path.toAbsolutePath().toString());
-                    return;
-                }
-                else
-                {
-                    write = true;
-                }
-            }
             
+            // Load verified member role ID from config 
+            verifiedMemberRoleId = config.hasPath("verifiedmember_roleID") 
+                    ? config.getLong("verifiedmember_roleID") 
+                    : 0L; // Use 0L as a default if the role ID is not found
+            
+            // Load DJ role ID from config 
+            djRoleId = config.hasPath("dj_roleID") 
+                    ? config.getLong("dj_roleID") 
+                    : 0L; // Use 0L as a default if the role ID is not found
+            
+            // Load admin member role ID from config 
+            adminRoleId = config.hasPath("admin_roleID") 
+                    ? config.getLong("admin_roleID") 
+                    : 0L; // Use 0L as a default if the role ID is not found
+
             // validate bot owner
-            if(owner<=0)
-            {
-                try
-                {
+            if (owner <= 0) {
+                try {
                     owner = Long.parseLong(prompt.prompt("Owner ID was missing, or the provided owner ID is not valid."
-                        + "\nPlease provide the User ID of the bot's owner."
-                        + "\nInstructions for obtaining your User ID can be found here:"
-                        + "\nhttps://github.com/TryNotDying/Sinon/wiki/Finding-Your-User-ID"
-                        + "\nOwner User ID: "));
-                }
-                catch(NumberFormatException | NullPointerException ex)
-                {
+                            + "\nPlease provide the User ID of the bot's owner."
+                            + "\nInstructions for obtaining your User ID can be found here:"
+                            + "\nhttps://github.com/TryNotDying/Sinon/wiki/Finding-Your-User-ID"
+                            + "\nOwner User ID: "));
+                } catch (NumberFormatException | NullPointerException ex) {
                     owner = 0;
                 }
-                if(owner<=0)
-                {
-                    prompt.alert(Prompt.Level.ERROR, CONTEXT, "Invalid User ID! Exiting.\n\nConfig Location: " + path.toAbsolutePath().toString());
-                    return;
-                }
-                else
-                {
+                if (owner <= 0) {
+                    throw new BotConfigException("Invalid User ID! Exiting.\n\nConfig Location: " + path.toAbsolutePath().toString()); // Throw exception
+                } else {
                     write = true;
                 }
             }
-            
-            if(write)
+
+            if (write)
                 writeToFile();
-            
+
             // if we get through the whole config, it's good to go
             valid = true;
-        }
-        catch (ConfigException ex)
-        {
-            prompt.alert(Prompt.Level.ERROR, CONTEXT, ex + ": " + ex.getMessage() + "\n\nConfig Location: " + path.toAbsolutePath().toString());
+        } catch (ConfigException ex) {
+            LOGGER.error("Error loading config: {}", ex.getMessage(), ex); // Improved logging
+            throw new BotConfigException("Error loading config: " + ex.getMessage(), ex); // Throw exception
         }
     }
-    
-    private void writeToFile()
-    {
+
+    private String getSCApi(Config config) {
+        return config.hasPath("scapi") ? config.getString("scapi") : ""; 
+    }
+
+    private void writeToFile() {
         byte[] bytes = loadDefaultConfig().replace("BOT_TOKEN_HERE", token)
                 .replace("0 // OWNER ID", Long.toString(owner))
                 .trim().getBytes();
-        try 
-        {
+        try {
             Files.write(path, bytes);
-        }
-        catch(IOException ex) 
-        {
-            prompt.alert(Prompt.Level.WARNING, CONTEXT, "Failed to write new config options to config.txt: "+ex
-                + "\nPlease make sure that the files are not on your desktop or some other restricted area.\n\nConfig Location: " 
-                + path.toAbsolutePath().toString());
+        } catch (IOException ex) {
+            prompt.alert(Prompt.Level.WARNING, CONTEXT, "Failed to write new config options to config.txt: " + ex
+                    + "\nPlease make sure that the files are not on your desktop or some other restricted area.\n\nConfig Location: "
+                    + path.toAbsolutePath().toString(), ex);
         }
     }
-    
-    private static String loadDefaultConfig()
-    {
-        String original = OtherUtil.loadResource(new sinon(), "/reference.conf");
-        return original==null 
-                ? "token = BOT_TOKEN_HERE\r\nowner = 0 // OWNER ID" 
-                : original.substring(original.indexOf(START_TOKEN)+START_TOKEN.length(), original.indexOf(END_TOKEN)).trim();
+
+    private static String loadDefaultConfig() {
+        String original = OtherUtil.loadResource("/reference.conf");
+        return original == null
+                ? "token = BOT_TOKEN_HERE\r\nowner = 0 // OWNER ID"
+                : original.substring(original.indexOf(START_TOKEN) + START_TOKEN.length(), original.indexOf(END_TOKEN)).trim();
     }
-    
-    private static Path getConfigPath()
-    {
+
+    private static Path getConfigPath() {
         Path path = OtherUtil.getPath(System.getProperty("config.file", System.getProperty("config", "config.txt")));
-        if(path.toFile().exists())
-        {
-            if(System.getProperty("config.file") == null)
+        if (path.toFile().exists()) {
+            if (System.getProperty("config.file") == null)
                 System.setProperty("config.file", System.getProperty("config", path.toAbsolutePath().toString()));
             ConfigFactory.invalidateCaches();
         }
         return path;
     }
-    
-    public static void writeDefaultConfig()
-    {
+
+    public static void writeDefaultConfig() {
         Prompt prompt = new Prompt(null, null, true, true);
         prompt.alert(Prompt.Level.INFO, "Sinon Config", "Generating default config file");
         Path path = BotConfig.getConfigPath();
         byte[] bytes = BotConfig.loadDefaultConfig().getBytes();
-        try
-        {
+        try {
             prompt.alert(Prompt.Level.INFO, "Sinon Config", "Writing default config file to " + path.toAbsolutePath().toString());
             Files.write(path, bytes);
-        }
-        catch(Exception ex)
-        {
-            prompt.alert(Prompt.Level.ERROR, "Sinon Config", "An error occurred writing the default config file: " + ex.getMessage());
+        } catch (Exception ex) {
+            prompt.alert(Prompt.Level.ERROR, "Sinon Config", "An error occurred writing the default config file: " + ex.getMessage(), ex);
         }
     }
     
-    public boolean isValid()
-    {
+    // Define the getter, ect for Class ID's
+    public long getVerifiedMemberRoleId() { // Get Verified Member Role From Config
+        return verifiedMemberRoleId;
+    }
+    
+    public long getAdminRoleId() { // Get Admin Role From Config
+        return adminRoleId;
+    }
+    
+    public long getDjRoleId() { // Get Dj Role From Config
+        return djRoleId;
+    }
+
+    public long getUserId() { // Might Be Used To Retrieve User Information, Currently Not Used
+        return userId;
+    }
+    
+    public boolean isValid() {
         return valid;
     }
-    
-    public String getConfigLocation()
-    {
+
+    public String getConfigLocation() {
         return path.toFile().getAbsolutePath();
     }
-    
-    public String getPrefix()
-    {
+
+    public String getPrefix() {
         return prefix;
     }
-    
-    public String getAltPrefix()
-    {
+
+    public String getAltPrefix() {
         return "NONE".equalsIgnoreCase(altprefix) ? null : altprefix;
     }
-    
-    public String getToken()
-    {
+
+    public String getToken() {
         return token;
     }
-    
-    public double getSkipRatio()
-    {
+
+    public double getSkipRatio() {
         return skipratio;
     }
-    
-    public long getOwnerId()
-    {
+
+    public long getOwnerId() {
         return owner;
     }
-    
-    public String getSuccess()
-    {
+
+    public String getSuccess() {
         return successEmoji;
     }
-    
-    public String getWarning()
-    {
+
+    public String getWarning() {
         return warningEmoji;
     }
-    
-    public String getError()
-    {
+
+    public String getError() {
         return errorEmoji;
     }
-    
-    public String getLoading()
-    {
+
+    public String getLoading() {
         return loadingEmoji;
     }
-    
-    public String getSearching()
-    {
+
+    public String getSearching() {
         return searchingEmoji;
     }
-    
-    public Activity getGame()
-    {
+
+    public Activity getGame() {
         return game;
     }
-    
-    public boolean isGameNone()
-    {
+
+    public boolean isGameNone() {
         return game != null && game.getName().equalsIgnoreCase("none");
     }
-    
-    public OnlineStatus getStatus()
-    {
+
+    public OnlineStatus getStatus() {
         return status;
     }
-    
-    public String getHelp()
-    {
+
+    public String getHelp() {
         return helpWord;
     }
-    
-    public boolean useYoutubeOauth2()
-    {
+
+    public boolean useYoutubeOauth2() {
         return youtubeOauth2;
     }
-    
-    public boolean getStay()
-    {
+
+    public boolean getStay() {
         return stayInChannel;
     }
-    
-    public boolean getSongInStatus()
-    {
+
+    public boolean getSongInStatus() {
         return songInGame;
     }
-    
-    public String getPlaylistsFolder()
-    {
+
+    public String getPlaylistsFolder() {
         return playlistsFolder;
     }
-    
-    public boolean getDBots()
-    {
+
+    public boolean getDBots() {
         return dbots;
     }
-    
-    public boolean useUpdateAlerts()
-    {
+
+    public boolean useUpdateAlerts() {
         return updatealerts;
     }
 
-    public String getLogLevel()
-    {
+    public String getLogLevel() {
         return logLevel;
     }
 
-    public boolean useEval()
-    {
+    public boolean useEval() {
         return useEval;
     }
-    
-    public String getEvalEngine()
-    {
+
+    public String getEvalEngine() {
         return evalEngine;
     }
-    
-    public boolean useNPImages()
-    {
+
+    public boolean useNPImages() {
         return npImages;
     }
-    
-    public long getMaxSeconds()
-    {
+
+    public String getSCApi() {
+        return SCApi;
+    }
+
+    public long getMaxSeconds() {
         return maxSeconds;
     }
-    
-    public int getMaxYTPlaylistPages()
-    {
+
+    public int getMaxYTPlaylistPages() {
         return maxYTPlaylistPages;
     }
-    
-    public String getMaxTime()
-    {
+
+    public String getMaxTime() {
         return TimeUtil.formatTime(maxSeconds * 1000);
     }
 
-    public long getAloneTimeUntilStop()
-    {
+    public long getAloneTimeUntilStop() {
         return aloneTimeUntilStop;
     }
-    
-    public boolean isTooLong(AudioTrack track)
-    {
-        if(maxSeconds<=0)
+
+    public boolean isTooLong(AudioTrack track) {
+        if (maxSeconds <= 0)
             return false;
-        return Math.round(track.getDuration()/1000.0) > maxSeconds;
+        return Math.round(track.getDuration() / 1000.0) > maxSeconds;
     }
 
-    public String[] getAliases(String command)
-    {
-        try
-        {
+    public String[] getAliases(String command) {
+        try {
             return aliases.getStringList(command).toArray(new String[0]);
-        }
-        catch(NullPointerException | ConfigException.Missing e)
-        {
+        } catch (NullPointerException | ConfigException.Missing e) {
             return new String[0];
         }
     }
-    
-    public Config getTransforms()
-    {
+
+    public Config getTransforms() {
         return transforms;
+    }
+
+    // Custom Exception Class
+    public static class BotConfigException extends Exception {
+        public BotConfigException(String message, Throwable cause) {
+            super(message, cause);
+        }
+
+        public BotConfigException(String message) {
+            super(message);
+        }
     }
 }

@@ -17,32 +17,54 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.audio.AudioHandler;
 import com.TryNotDying.Sinon.commands.DJCommand;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Above import dependencies
  * Below is the pause command
  */
-public class PauseCmd extends DJCommand 
-{
-    public PauseCmd(Bot bot)
-    {
+public class PauseCmd extends SlashDJCommand {
+
+    public PauseCmd(Bot bot) {
         super(bot);
         this.name = "pause";
         this.help = "pauses the current song";
         this.aliases = bot.getConfig().getAliases(this.name);
-        this.bePlaying = true;
+        this.category = new Category("DJ");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
     }
 
     @Override
-    public void doCommand(CommandEvent event) 
-    {
-        AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-        if(handler.getPlayer().isPaused())
-        {
-            event.replyWarning("The player is already paused! Use `"+event.getClient().getPrefix()+"play` to unpause!");
+    protected void doCommand(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
             return;
         }
-        handler.getPlayer().setPaused(true);
-        event.replySuccess("Paused **"+handler.getPlayer().getPlayingTrack().getInfo().title+"**. Type `"+event.getClient().getPrefix()+"play` to unpause!");
+
+        // Check if the user has the DJ role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getDjRoleId()) {
+                AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
+                if (handler.getPlayer().isPaused()) {
+                    event.replyWarning("The player is already paused! Use `/play` to unpause!");
+                    return;
+                }
+                handler.getPlayer().setPaused(true);
+                event.replySuccess("Paused **" + handler.getPlayer().getPlayingTrack().getInfo().title + "**. Type `/play` to unpause!");
+                return; // Allow the user
+            }
+        }
+
+        // If the user doesn't have the DJ role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
 }

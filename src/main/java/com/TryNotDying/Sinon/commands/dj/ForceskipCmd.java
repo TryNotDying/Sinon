@@ -19,29 +19,52 @@ import com.TryNotDying.Sinon.audio.AudioHandler;
 import com.TryNotDying.Sinon.audio.RequestMetadata;
 import com.TryNotDying.Sinon.commands.DJCommand;
 import com.TryNotDying.Sinon.utils.FormatUtil;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Above import dependencies
  * Below is the force skip command
  */
-public class ForceskipCmd extends DJCommand 
-{
-    public ForceskipCmd(Bot bot)
-    {
+public class ForceskipCmd extends SlashDJCommand {
+
+    public ForceskipCmd(Bot bot) {
         super(bot);
         this.name = "forceskip";
         this.help = "skips the current song";
         this.aliases = bot.getConfig().getAliases(this.name);
-        this.bePlaying = true;
+        this.category = new Category("DJ");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
     }
 
     @Override
-    public void doCommand(CommandEvent event) 
-    {
-        AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-        RequestMetadata rm = handler.getRequestMetadata();
-        event.reply(event.getClient().getSuccess()+" Skipped **"+handler.getPlayer().getPlayingTrack().getInfo().title
-                +"** "+(rm.getOwner() == 0L ? "(autoplay)" : "(requested by **" + FormatUtil.formatUsername(rm.user) + "**)"));
-        handler.getPlayer().stopTrack();
+    protected void doCommand(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
+            return;
+        }
+
+        // Check if the user has the DJ role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getDjRoleId()) {
+                AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
+                RequestMetadata rm = handler.getRequestMetadata();
+                event.reply(event.getClient().getSuccess() + " Skipped **" + handler.getPlayer().getPlayingTrack().getInfo().title
+                        + "** " + (rm.getOwner() == 0L ? "(autoplay)" : "(requested by **" + FormatUtil.formatUsername(rm.user) + "**)"));
+                handler.getPlayer().stopTrack();
+                return; // Allow the user
+            }
+        }
+
+        // If the user doesn't have the DJ role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
 }

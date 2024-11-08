@@ -20,46 +20,40 @@ import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import com.TryNotDying.Sinon.utils.OtherUtil;
 import net.dv8tion.jda.api.entities.Icon;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 
 /**
  * Above import dependencies
  * Below is the set avatar command
  */
-public class SetavatarCmd extends OwnerCommand 
-{
-    public SetavatarCmd(Bot bot)
-    {
+public class SetavatarCmd extends OwnerCommand {
+
+    public SetavatarCmd(Bot bot) {
+        super(bot);
         this.name = "setavatar";
         this.help = "sets the avatar of the Sinon";
-        this.arguments = "<url>";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.guildOnly = false;
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("url", "URL of the image to set as avatar", OptionType.STRING, true)
+        };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
-        String url;
-        if(event.getArgs().isEmpty())
-            if(!event.getMessage().getAttachments().isEmpty() && event.getMessage().getAttachments().get(0).isImage())
-                url = event.getMessage().getAttachments().get(0).getUrl();
-            else
-                url = null;
-        else
-            url = event.getArgs();
+    protected void doCommand(CommandEvent event) {
+        String url = event.getOption("url").getAsString();
         InputStream s = OtherUtil.imageFromUrl(url);
-        if(s==null)
-        {
-            event.reply(event.getClient().getError()+" Invalid or missing URL");
-        }
-        else
-        {
+        if (s == null) {
+            event.reply(event.getClient().getError() + " Invalid or missing URL");
+        } else {
             try {
-            event.getSelfUser().getManager().setAvatar(Icon.from(s)).queue(
-                    v -> event.reply(event.getClient().getSuccess()+" Successfully changed avatar."), 
-                    t -> event.reply(event.getClient().getError()+" Failed to set avatar."));
-            } catch(IOException e) {
-                event.reply(event.getClient().getError()+" Could not load from provided URL.");
+                event.getSelfUser().getManager().setAvatar(Icon.from(s)).queue(
+                        v -> event.reply(event.getClient().getSuccess() + " Successfully changed avatar."),
+                        t -> event.reply(event.getClient().getError() + " Failed to set avatar.")
+                );
+            } catch (IOException e) {
+                event.reply(event.getClient().getError() + " Could not load from provided URL.");
             }
         }
     }

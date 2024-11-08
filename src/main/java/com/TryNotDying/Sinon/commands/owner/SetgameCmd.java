@@ -17,132 +17,137 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import net.dv8tion.jda.api.entities.Activity;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 
 /**
  * Above import dependencies
  * Below is the set activity command
  */
-public class SetgameCmd extends OwnerCommand
-{
-    public SetgameCmd(Bot bot)
-    {
+public class SetgameCmd extends OwnerCommand {
+
+    public SetgameCmd(Bot bot) {
+        super(bot);
         this.name = "setgame";
         this.help = "sets the game Sinon is playing";
-        this.arguments = "[action] [game]";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.guildOnly = false;
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("action", "Action to perform (playing, streaming, listening, watching)", OptionType.STRING, true),
+            new Option("text", "Game name or Stream information", OptionType.STRING, true)
+        };
         this.children = new OwnerCommand[]{
             new SetlistenCmd(),
             new SetstreamCmd(),
             new SetwatchCmd()
         };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
-        String title = event.getArgs().toLowerCase().startsWith("playing") ? event.getArgs().substring(7).trim() : event.getArgs();
-        try
-        {
-            event.getJDA().getPresence().setActivity(title.isEmpty() ? null : Activity.playing(title));
-            event.reply(event.getClient().getSuccess()+" **"+event.getSelfUser().getName()
-                    +"** is "+(title.isEmpty() ? "no longer playing anything." : "now playing `"+title+"`"));
-        }
-        catch(Exception e)
-        {
-            event.reply(event.getClient().getError()+" The activity could not be set!");
+    protected void doCommand(CommandEvent event) {
+        String action = event.getOption("action").getAsString();
+        String text = event.getOption("text").getAsString();
+
+        switch (action.toLowerCase()) {
+            case "playing":
+                try {
+                    event.getJDA().getPresence().setActivity(text.isEmpty() ? null : Activity.playing(text));
+                    event.reply(event.getClient().getSuccess() + " **" + event.getSelfUser().getName()
+                            + "** is " + (text.isEmpty() ? "no longer playing anything." : "now playing `" + text + "`"));
+                } catch (Exception e) {
+                    event.reply(event.getClient().getError() + " The activity could not be set!");
+                }
+                break;
+            case "stream":
+            case "twitch":
+            case "streaming":
+                new SetstreamCmd().doCommand(event);
+                break;
+            case "listen":
+            case "listening":
+                new SetlistenCmd().doCommand(event);
+                break;
+            case "watch":
+            case "watching":
+                new SetwatchCmd().doCommand(event);
+                break;
+            default:
+                event.reply(event.getClient().getWarning() + " Invalid action. Please specify the action to perform (playing, streaming, listening, watching) followed by the text");
+                break;
         }
     }
-    
-    private class SetstreamCmd extends OwnerCommand
-    {
-        private SetstreamCmd()
-        {
+
+    private class SetstreamCmd extends OwnerCommand {
+        private SetstreamCmd() {
             this.name = "stream";
-            this.aliases = new String[]{"twitch","streaming"};
+            this.aliases = new String[]{"twitch", "streaming"};
             this.help = "sets the game Sinon is playing to a stream";
-            this.arguments = "<username> <game>";
-            this.guildOnly = false;
+            this.category = new Category("Owner");
+            this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+            this.options = new Option[]{
+                new Option("username", "Twitch username", OptionType.STRING, true),
+                new Option("game", "Game name", OptionType.STRING, true)
+            };
         }
 
         @Override
-        protected void execute(CommandEvent event)
-        {
-            String[] parts = event.getArgs().split("\\s+", 2);
-            if(parts.length<2)
-            {
-                event.replyError("Please include a twitch username and the name of the game to 'stream'");
-                return;
-            }
-            try
-            {
-                event.getJDA().getPresence().setActivity(Activity.streaming(parts[1], "https://twitch.tv/"+parts[0]));
-                event.replySuccess("**"+event.getSelfUser().getName()
-                        +"** is now streaming `"+parts[1]+"`");
-            }
-            catch(Exception e)
-            {
-                event.reply(event.getClient().getError()+" The twitch channel or game could not be set! Please try again!");
+        protected void doCommand(CommandEvent event) {
+            String username = event.getOption("username").getAsString();
+            String game = event.getOption("game").getAsString();
+            try {
+                event.getJDA().getPresence().setActivity(Activity.streaming(game, "https://twitch.tv/" + username));
+                event.replySuccess("**" + event.getSelfUser().getName()
+                        + "** is now streaming `" + game + "`");
+            } catch (Exception e) {
+                event.reply(event.getClient().getError() + " The twitch channel or game could not be set! Please try again!");
             }
         }
     }
-    
-    private class SetlistenCmd extends OwnerCommand
-    {
-        private SetlistenCmd()
-        {
+
+    private class SetlistenCmd extends OwnerCommand {
+        private SetlistenCmd() {
             this.name = "listen";
             this.aliases = new String[]{"listening"};
             this.help = "sets the activity Sinon is listening to";
-            this.arguments = "<title>";
-            this.guildOnly = false;
+            this.category = new Category("Owner");
+            this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+            this.options = new Option[]{
+                new Option("title", "Title to listen to", OptionType.STRING, true)
+            };
         }
 
         @Override
-        protected void execute(CommandEvent event)
-        {
-            if(event.getArgs().isEmpty())
-            {
-                event.replyError("Please include a title to listen to!");
-                return;
-            }
-            String title = event.getArgs().toLowerCase().startsWith("to") ? event.getArgs().substring(2).trim() : event.getArgs();
-            try
-            {
+        protected void doCommand(CommandEvent event) {
+            String title = event.getOption("title").getAsString();
+            try {
                 event.getJDA().getPresence().setActivity(Activity.listening(title));
-                event.replySuccess("**"+event.getSelfUser().getName()+"** is now listening to `"+title+"`");
-            } catch(Exception e) {
-                event.reply(event.getClient().getError()+" The activity could not be set!");
+                event.replySuccess("**" + event.getSelfUser().getName() + "** is now listening to `" + title + "`");
+            } catch (Exception e) {
+                event.reply(event.getClient().getError() + " The activity could not be set!");
             }
         }
     }
-    
-    private class SetwatchCmd extends OwnerCommand
-    {
-        private SetwatchCmd()
-        {
+
+    private class SetwatchCmd extends OwnerCommand {
+        private SetwatchCmd() {
             this.name = "watch";
             this.aliases = new String[]{"watching"};
             this.help = "sets the activity the bot is watching";
-            this.arguments = "<title>";
-            this.guildOnly = false;
+            this.category = new Category("Owner");
+            this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+            this.options = new Option[]{
+                new Option("title", "Title to watch", OptionType.STRING, true)
+            };
         }
 
         @Override
-        protected void execute(CommandEvent event)
-        {
-            if(event.getArgs().isEmpty())
-            {
-                event.replyError("Please include a title to watch!");
-                return;
-            }
-            String title = event.getArgs();
-            try
-            {
+        protected void doCommand(CommandEvent event) {
+            String title = event.getOption("title").getAsString();
+            try {
                 event.getJDA().getPresence().setActivity(Activity.watching(title));
-                event.replySuccess("**"+event.getSelfUser().getName()+"** is now watching `"+title+"`");
-            } catch(Exception e) {
-                event.reply(event.getClient().getError()+" The activity could not be set!");
+                event.replySuccess("**" + event.getSelfUser().getName() + "** is now watching `" + title + "`");
+            } catch (Exception e) {
+                event.reply(event.getClient().getError() + " The activity could not be set!");
             }
         }
     }

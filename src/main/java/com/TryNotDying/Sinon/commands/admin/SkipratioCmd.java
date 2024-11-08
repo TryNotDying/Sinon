@@ -17,39 +17,58 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.AdminCommand;
 import com.TryNotDying.Sinon.settings.Settings;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Above import dependencies
  * Below is the skip settings and vote ratio
  */
-public class SkipratioCmd extends AdminCommand
-{
-    public SkipratioCmd(Bot bot)
-    {
+public class SkipratioCmd extends SlashAdminCommand {
+
+    public SkipratioCmd(Bot bot) {
+        super(bot);
         this.name = "setskip";
         this.help = "sets a server-specific skip percentage";
-        this.arguments = "<0 - 100>";
-        this.aliases = bot.getConfig().getAliases(this.name);
+        this.category = new Category("Admin");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("percentage", "Skip percentage (0 - 100)", OptionType.INTEGER, true)
+        };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
-        try
-        {
-            int val = Integer.parseInt(event.getArgs().endsWith("%") ? event.getArgs().substring(0,event.getArgs().length()-1) : event.getArgs());
-            if( val < 0 || val > 100)
-            {
-                event.replyError("The provided value must be between 0 and 100!");
-                return;
+    protected void doCommand(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
+            return;
+        }
+
+        // Check if the user has the admin role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getAdminRoleId()) {
+                int val = event.getOption("percentage").getAsInt();
+                if (val < 0 || val > 100) {
+                    event.replyError("The provided value must be between 0 and 100!");
+                    return;
+                }
+                Settings s = event.getClient().getSettingsFor(event.getGuild());
+                s.setSkipRatio(val / 100.0);
+                event.replySuccess("Skip percentage has been set to `" + val + "%` of listeners on *" + event.getGuild().getName() + "*");
+                return; // Allow the user
             }
-            Settings s = event.getClient().getSettingsFor(event.getGuild());
-            s.setSkipRatio(val / 100.0);
-            event.replySuccess("Skip percentage has been set to `" + val + "%` of listeners on *" + event.getGuild().getName() + "*");
         }
-        catch(NumberFormatException ex)
-        {
-            event.replyError("Please include an integer between 0 and 100 (default is 55). This number is the percentage of listening users that must vote to skip a song.");
-        }
+
+        // If the user doesn't have the admin role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
 }

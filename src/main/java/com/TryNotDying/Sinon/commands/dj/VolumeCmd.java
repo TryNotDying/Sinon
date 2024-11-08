@@ -19,49 +19,72 @@ import com.TryNotDying.Sinon.audio.AudioHandler;
 import com.TryNotDying.Sinon.commands.DJCommand;
 import com.TryNotDying.Sinon.settings.Settings;
 import com.TryNotDying.Sinon.utils.FormatUtil;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Above import dependencies
  * Below is the volume control commands, depricated when you can use discords built in volume. Can come in handy for unusually quiet songs.
  */
-public class VolumeCmd extends DJCommand
-{
-    public VolumeCmd(Bot bot)
-    {
+public class VolumeCmd extends SlashDJCommand {
+
+    public VolumeCmd(Bot bot) {
         super(bot);
         this.name = "volume";
         this.aliases = bot.getConfig().getAliases(this.name);
         this.help = "sets or shows volume";
-        this.arguments = "[5-200]";
+        this.category = new Category("DJ");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("volume", "Volume level (5-150)", OptionType.INTEGER, false)
+        };
     }
 
     @Override
-    public void doCommand(CommandEvent event)
-    {
-        AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-        Settings settings = event.getClient().getSettingsFor(event.getGuild());
-        int volume = handler.getPlayer().getVolume();
-        if(event.getArgs().isEmpty())
-        {
-            event.reply(FormatUtil.volumeIcon(volume)+" Current volume is `"+volume+"`");
+    protected void doCommand(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
+            return;
         }
-        else
-        {
-            int nvolume;
-            try{
-                nvolume = Integer.parseInt(event.getArgs());
-            }catch(NumberFormatException e){
-                nvolume = -1;
-            }
-            if(nvolume<0 || nvolume>150)
-                event.reply(event.getClient().getError()+" Volume must be a valid integer between 5 and 200!");
-            else
-            {
-                handler.getPlayer().setVolume(nvolume);
-                settings.setVolume(nvolume);
-                event.reply(FormatUtil.volumeIcon(nvolume)+" Volume changed from `"+volume+"` to `"+nvolume+"`");
+
+        // Check if the user has the DJ role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getDjRoleId()) {
+                AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
+                Settings settings = event.getClient().getSettingsFor(event.getGuild());
+                int volume = handler.getPlayer().getVolume();
+                String args = event.getOption("volume") != null ? event.getOption("volume").getAsString() : "";
+                if (args.isEmpty()) {
+                    event.reply(FormatUtil.volumeIcon(volume) + " Current volume is `" + volume + "`");
+                } else {
+                    int nvolume;
+                    try {
+                        nvolume = Integer.parseInt(args);
+                    } catch (NumberFormatException e) {
+                        nvolume = -1;
+                    }
+                    if (nvolume < 0 || nvolume > 150) {
+                        event.reply(event.getClient().getError() + " Volume must be a valid integer between 5 and 200!");
+                    } else {
+                        handler.getPlayer().setVolume(nvolume);
+                        settings.setVolume(nvolume);
+                        event.reply(FormatUtil.volumeIcon(nvolume) + " Volume changed from `" + volume + "` to `" + nvolume + "`");
+                    }
+                }
+                return; // Allow the user
             }
         }
+
+        // If the user doesn't have the DJ role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
-    
 }

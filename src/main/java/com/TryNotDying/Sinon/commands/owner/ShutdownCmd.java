@@ -16,27 +16,26 @@ package com.TryNotDying.Sinon.commands.owner;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
+import com.jagrosh.jdautilities.command.SlashCommand;
 
 /**
  * Above import dependencies
  * Below is the shutdown command
  */
-public class ShutdownCmd extends OwnerCommand
-{
+public class ShutdownCmd extends OwnerCommand {
     private final Bot bot;
-    
-    public ShutdownCmd(Bot bot)
-    {
+
+    public ShutdownCmd(Bot bot) {
+        super(bot);
         this.bot = bot;
         this.name = "shutdown";
         this.help = "safely shuts down Sinon";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.guildOnly = false;
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
     }
-    
+
     @Override
-    protected void execute(CommandEvent event)
-    {
+    protected void doCommand(CommandEvent event) {
         event.replyWarning("Sinon is shutting down...");
         bot.shutdown();
     }

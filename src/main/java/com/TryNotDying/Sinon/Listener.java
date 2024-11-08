@@ -35,63 +35,47 @@ import org.slf4j.LoggerFactory;
  * Above import dependencies
  * Below is the listener and logger for the console
  */
-public class Listener extends ListenerAdapter
-{
+public class Listener extends ListenerAdapter {
     private final Bot bot;
-    
-    public Listener(Bot bot)
-    {
+
+    public Listener(Bot bot) {
         this.bot = bot;
     }
-    
+
     @Override
-    public void onReady(ReadyEvent event) 
-    {
-        if(event.getJDA().getGuildCache().isEmpty())
-        {
+    public void onReady(ReadyEvent event) {
+        if (event.getJDA().getGuildCache().isEmpty()) {
             Logger log = LoggerFactory.getLogger("Sinon");
             log.warn("This bot is not on any guilds! Use the following link to add the bot to your guilds!");
             log.warn(event.getJDA().getInviteUrl(sinon.RECOMMENDED_PERMS));
         }
         credit(event.getJDA());
-        event.getJDA().getGuilds().forEach((guild) -> 
-        {
-            try
-            {
+        event.getJDA().getGuilds().forEach((guild) -> {
+            try {
                 String defpl = bot.getSettingsManager().getSettings(guild).getDefaultPlaylist();
                 VoiceChannel vc = bot.getSettingsManager().getSettings(guild).getVoiceChannel(guild);
-                if(defpl!=null && vc!=null && bot.getPlayerManager().setUpHandler(guild).playFromDefault())
-                {
+                if (defpl != null && vc != null && bot.getPlayerManager().setUpHandler(guild).playFromDefault()) {
                     guild.getAudioManager().openAudioConnection(vc);
                 }
-            }
-            catch(Exception ignore) {}
+            } catch (Exception ignore) {}
         });
-        if(bot.getConfig().useUpdateAlerts())
-        {
-            bot.getThreadpool().scheduleWithFixedDelay(() -> 
-            {
-                try
-                {
+        if (bot.getConfig().useUpdateAlerts()) {
+            bot.getThreadpool().scheduleWithFixedDelay(() -> {
+                try {
                     User owner = bot.getJDA().retrieveUserById(bot.getConfig().getOwnerId()).complete();
                     String currentVersion = OtherUtil.getCurrentVersion();
                     String latestVersion = OtherUtil.getLatestVersion();
-                    if(latestVersion!=null && !currentVersion.equalsIgnoreCase(latestVersion))
-                    {
+                    if (latestVersion != null && !currentVersion.equalsIgnoreCase(latestVersion)) {
                         String msg = String.format(OtherUtil.NEW_VERSION_AVAILABLE, currentVersion, latestVersion);
                         owner.openPrivateChannel().queue(pc -> pc.sendMessage(msg).queue());
                     }
-                }
-                catch(Exception ignored) {} // ignored
+                } catch (Exception ignored) {} // ignored
             }, 0, 24, TimeUnit.HOURS);
         }
-        if (bot.getConfig().useYoutubeOauth2())
-        {
+        if (bot.getConfig().useYoutubeOauth2()) {
             YoutubeOauth2TokenHandler.Data data = bot.getYouTubeOauth2Handler().getData();
-            if (data != null)
-            {
-                try
-                {
+            if (data != null) {
+                try {
                     PrivateChannel channel = bot.getJDA().openPrivateChannelById(bot.getConfig().getOwnerId()).complete();
                     channel
                        .sendMessage(
@@ -101,44 +85,40 @@ public class Listener extends ListenerAdapter
                            + data.getAuthorisationUrl()
                            + " and enter the code **" + data.getCode() + "**")
                        .queue();
-                }
-                catch (Exception ignored) {}
+                } catch (Exception ignored) {}
             }
         }
     }
-    
+
     @Override
-    public void onGuildMessageDelete(GuildMessageDeleteEvent event) 
-    {
+    public void onGuildMessageDelete(GuildMessageDeleteEvent event) {
         bot.getNowplayingHandler().onMessageDelete(event.getGuild(), event.getMessageIdLong());
     }
 
     @Override
-    public void onGuildVoiceUpdate(@NotNull GuildVoiceUpdateEvent event)
-    {
+    public void onGuildVoiceUpdate(@NotNull GuildVoiceUpdateEvent event) {
         bot.getAloneInVoiceHandler().onVoiceUpdate(event);
     }
 
     @Override
-    public void onShutdown(ShutdownEvent event) 
-    {
+    public void onShutdown(ShutdownEvent event) {
         bot.shutdown();
     }
 
     @Override
-    public void onGuildJoin(GuildJoinEvent event) 
-    {
+    public void onGuildJoin(GuildJoinEvent event) {
         credit(event.getJDA());
     }
-    
+
     // make sure people aren't adding clones to dbots
-    private void credit(JDA jda)
-    {
+    private void credit(JDA jda) {
         Guild dbots = jda.getGuildById(110373943822540800L);
-        if(dbots==null)
+        if (dbots == null) {
             return;
-        if(bot.getConfig().getDBots())
+        }
+        if (bot.getConfig().getDBots()) {
             return;
+        }
         jda.getTextChannelById(119222314964353025L)
                 .sendMessage("This account is running Sinon. Please do not list bot clones on this server, <@"+bot.getConfig().getOwnerId()+">.").complete();
         dbots.leave().queue();

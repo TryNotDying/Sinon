@@ -7,11 +7,16 @@ import com.TryNotDying.Sinon.audio.AudioHandler;
 import com.TryNotDying.Sinon.audio.QueuedTrack;
 import com.TryNotDying.Sinon.commands.DJCommand;
 import com.TryNotDying.Sinon.queue.AbstractQueue;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Command that provides users the ability to move a track in the playlist.
  */
-public class MoveTrackCmd extends DJCommand
+public class MoveTrackCmd extends SlashDJCommand
 {
 
     public MoveTrackCmd(Bot bot)
@@ -19,63 +24,71 @@ public class MoveTrackCmd extends DJCommand
         super(bot);
         this.name = "movetrack";
         this.help = "move a track in the current queue to a different position";
-        this.arguments = "<from> <to>";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.bePlaying = true;
+        this.category = new Category("DJ");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("from", "The original position of the song", OptionType.INTEGER, true),
+            new Option("to", "The new position of the song", OptionType.INTEGER, true)
+        };
     }
 
     @Override
-    public void doCommand(CommandEvent event)
+    protected void doCommand(CommandEvent event)
     {
-        int from;
-        int to;
-
-        String[] parts = event.getArgs().split("\\s+", 2);
-        if(parts.length < 2)
-        {
-            event.replyError("Please include two valid indexes.");
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
             return;
         }
 
-        try
-        {
-            // Validate the args
-            from = Integer.parseInt(parts[0]);
-            to = Integer.parseInt(parts[1]);
-        }
-        catch (NumberFormatException e)
-        {
-            event.replyError("Please provide two valid indexes.");
-            return;
+        // Check if the user has the DJ role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getDjRoleId()) {
+                int from;
+                int to;
+
+                // Validate the args
+                from = event.getOption("from").getAsInt();
+                to = event.getOption("to").getAsInt();
+
+                if (from == to)
+                {
+                    event.replyError("Can't move a track to the same position.");
+                    return;
+                }
+
+                // Validate that from and to are available
+                AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
+                AbstractQueue<QueuedTrack> queue = handler.getQueue();
+                if (isUnavailablePosition(queue, from))
+                {
+                    String reply = String.format("`%d` is not a valid position in the queue!", from);
+                    event.replyError(reply);
+                    return;
+                }
+                if (isUnavailablePosition(queue, to))
+                {
+                    String reply = String.format("`%d` is not a valid position in the queue!", to);
+                    event.replyError(reply);
+                    return;
+                }
+
+                // Move the track
+                QueuedTrack track = queue.moveItem(from - 1, to - 1);
+                String trackTitle = track.getTrack().getInfo().title;
+                String reply = String.format("Moved **%s** from position `%d` to `%d`.", trackTitle, from, to);
+                event.replySuccess(reply);
+                return; // Allow the user
+            }
         }
 
-        if (from == to)
-        {
-            event.replyError("Can't move a track to the same position.");
-            return;
-        }
-
-        // Validate that from and to are available
-        AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
-        AbstractQueue<QueuedTrack> queue = handler.getQueue();
-        if (isUnavailablePosition(queue, from))
-        {
-            String reply = String.format("`%d` is not a valid position in the queue!", from);
-            event.replyError(reply);
-            return;
-        }
-        if (isUnavailablePosition(queue, to))
-        {
-            String reply = String.format("`%d` is not a valid position in the queue!", to);
-            event.replyError(reply);
-            return;
-        }
-
-        // Move the track
-        QueuedTrack track = queue.moveItem(from - 1, to - 1);
-        String trackTitle = track.getTrack().getInfo().title;
-        String reply = String.format("Moved **%s** from position `%d` to `%d`.", trackTitle, from, to);
-        event.replySuccess(reply);
+        // If the user doesn't have the DJ role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
 
     private static boolean isUnavailablePosition(AbstractQueue<QueuedTrack> queue, int position)

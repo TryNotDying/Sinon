@@ -21,47 +21,59 @@ import com.TryNotDying.Sinon.commands.AdminCommand;
 import com.TryNotDying.Sinon.settings.Settings;
 import com.TryNotDying.Sinon.utils.FormatUtil;
 import net.dv8tion.jda.api.entities.VoiceChannel;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Role;
+import java.util.List;
 
 /**
  * Above import dependencies
  * Below is the Set Voice Channel Command
  */
-public class SetvcCmd extends AdminCommand 
-{
-    public SetvcCmd(Bot bot)
-    {
+public class SetvcCmd extends SlashAdminCommand {
+
+    public SetvcCmd(Bot bot) {
+        super(bot);
         this.name = "setvc";
         this.help = "sets the voice channel for playing music";
-        this.arguments = "<channel|NONE>";
-        this.aliases = bot.getConfig().getAliases(this.name);
+        this.category = new Category("Admin");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("channel", "Voice channel name (or NONE to clear)", OptionType.CHANNEL, true)
+        };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
-        if(event.getArgs().isEmpty())
-        {
-            event.reply(event.getClient().getError()+" Please include a voice channel or NONE");
+    protected void doCommand(CommandEvent event) {
+        Member member = event.getMember();
+        if (member == null) {
+            event.replyError("You do not have permission to use this command.");
             return;
         }
-        Settings s = event.getClient().getSettingsFor(event.getGuild());
-        if(event.getArgs().equalsIgnoreCase("none"))
-        {
-            s.setVoiceChannel(null);
-            event.reply(event.getClient().getSuccess()+" Music can now be played in any channel");
-        }
-        else
-        {
-            List<VoiceChannel> list = FinderUtil.findVoiceChannels(event.getArgs(), event.getGuild());
-            if(list.isEmpty())
-                event.reply(event.getClient().getWarning()+" No Voice Channels found matching \""+event.getArgs()+"\"");
-            else if (list.size()>1)
-                event.reply(event.getClient().getWarning()+FormatUtil.listOfVChannels(list, event.getArgs()));
-            else
-            {
-                s.setVoiceChannel(list.get(0));
-                event.reply(event.getClient().getSuccess()+" Music can now only be played in "+list.get(0).getAsMention());
+
+        // Check if the user has the admin role
+        List<Role> roles = member.getRoles();
+        for (Role role : roles) {
+            if (role.getIdLong() == bot.getConfig().getAdminRoleId()) {
+                VoiceChannel channel = event.getOption("channel").getAsVoiceChannel();
+                Settings s = event.getClient().getSettingsFor(event.getGuild());
+                if (channel == null) {
+                    s.setVoiceChannel(null);
+                    event.reply(event.getClient().getSuccess() + " Music can now be played in any channel");
+                } else {
+                    s.setVoiceChannel(channel);
+                    event.reply(event.getClient().getSuccess() + " Music can now only be played in " + channel.getAsMention());
+                }
+                return; // Allow the user
             }
         }
+
+        // If the user doesn't have the admin role, send an error embed.
+        event.reply(new EmbedBuilder()
+                .setColor(Color.RED)
+                .setTitle("Error")
+                .setDescription("You do not have permission to use this command.")
+                .build());
     }
 }

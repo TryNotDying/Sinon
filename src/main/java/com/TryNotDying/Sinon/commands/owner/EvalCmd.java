@@ -19,34 +19,36 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import net.dv8tion.jda.api.entities.ChannelType;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
 
 /**
  * Above import dependencies
  * Below is the nashorn evaluation command
  */
-public class EvalCmd extends OwnerCommand 
-{
+public class EvalCmd extends OwnerCommand {
     private final Bot bot;
     private final String engine;
-    
-    public EvalCmd(Bot bot)
-    {
+
+    public EvalCmd(Bot bot) {
+        super(bot);
         this.bot = bot;
         this.name = "eval";
         this.help = "evaluates nashorn code";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.engine = bot.getConfig().getEvalEngine();
-        this.guildOnly = false;
+        this.category = new Category("Owner");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_EMBED_LINKS};
+        this.options = new Option[]{
+            new Option("code", "Code to evaluate", OptionType.STRING, true)
+        };
     }
-    
+
     @Override
-    protected void execute(CommandEvent event) 
-    {
+    protected void doCommand(CommandEvent event) {
+        String args = event.getOption("code").getAsString();
         ScriptEngine se = new ScriptEngineManager().getEngineByName(engine);
-        if(se == null)
-        {
-            event.replyError("The eval engine provided in the config (`"+engine+"`) doesn't exist. This could be due to an invalid "
-                    + "engine name, or the engine not existing in your version of java (`"+System.getProperty("java.version")+"`).");
+        if (se == null) {
+            event.replyError("The eval engine provided in the config (`" + engine + "`) doesn't exist. This could be due to an invalid "
+                    + "engine name, or the engine not existing in your version of java (`" + System.getProperty("java.version") + "`).");
             return;
         }
         se.put("bot", bot);
@@ -56,14 +58,11 @@ public class EvalCmd extends OwnerCommand
             se.put("guild", event.getGuild());
             se.put("channel", event.getChannel());
         }
-        try
-        {
-            event.reply(event.getClient().getSuccess()+" Evaluated Successfully:\n```\n"+se.eval(event.getArgs())+" ```");
-        } 
-        catch(Exception e)
-        {
-            event.reply(event.getClient().getError()+" An exception was thrown:\n```\n"+e+" ```");
+        try {
+            event.reply(event.getClient().getSuccess() + " Evaluated Successfully:\n```\n" + se.eval(args) + " ```");
+        } catch (Exception e) {
+            event.reply(event.getClient().getError() + " An exception was thrown:\n```\n" + e + " ```");
         }
     }
-    
+
 }

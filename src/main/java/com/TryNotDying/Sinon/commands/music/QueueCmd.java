@@ -29,25 +29,21 @@ import com.TryNotDying.Sinon.utils.TimeUtil;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.exceptions.PermissionException;
+import com.jagrosh.jdautilities.command.SlashCommand;
 
 /**
  * Above import dependencies
  * Below is the current queue command
  */
-public class QueueCmd extends MusicCommand 
-{
+public class QueueCmd extends SlashMusicCommand {
     private final Paginator.Builder builder;
-    
-    public QueueCmd(Bot bot)
-    {
+
+    public QueueCmd(Bot bot) {
         super(bot);
         this.name = "queue";
         this.help = "shows the current queue";
-        this.arguments = "[pagenum]";
-        this.aliases = bot.getConfig().getAliases(this.name);
-        this.bePlaying = true;
-        this.botPermissions = new Permission[]{Permission.MESSAGE_ADD_REACTION,Permission.MESSAGE_EMBED_LINKS};
+        this.category = new Category("Music");
+        this.userPermissions = new Permission[]{Permission.MESSAGE_ADD_REACTION, Permission.MESSAGE_EMBED_LINKS};
         builder = new Paginator.Builder()
                 .setColumns(1)
                 .setFinalAction(m -> {try{m.clearReactions().queue();}catch(PermissionException ignore){}})
@@ -61,58 +57,46 @@ public class QueueCmd extends MusicCommand
     }
 
     @Override
-    public void doCommand(CommandEvent event)
-    {
-        int pagenum = 1;
-        try
-        {
-            pagenum = Integer.parseInt(event.getArgs());
-        }
-        catch(NumberFormatException ignore){}
-        AudioHandler ah = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+    protected void doCommand(CommandEvent event) {
+        AudioHandler ah = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
         List<QueuedTrack> list = ah.getQueue().getList();
-        if(list.isEmpty())
-        {
+        if (list.isEmpty()) {
             Message nowp = ah.getNowPlaying(event.getJDA());
             Message nonowp = ah.getNoMusicPlaying(event.getJDA());
             Message built = new MessageBuilder()
                     .setContent(event.getClient().getWarning() + " There is no music in the queue!")
-                    .setEmbeds((nowp==null ? nonowp : nowp).getEmbeds().get(0)).build();
-            event.reply(built, m -> 
-            {
-                if(nowp!=null)
+                    .setEmbeds((nowp == null ? nonowp : nowp).getEmbeds().get(0)).build();
+            event.reply(built, m -> {
+                if (nowp != null) {
                     bot.getNowplayingHandler().setLastNPMessage(m);
+                }
             });
             return;
         }
         String[] songs = new String[list.size()];
         long total = 0;
-        for(int i=0; i<list.size(); i++)
-        {
+        for (int i = 0; i < list.size(); i++) {
             total += list.get(i).getTrack().getDuration();
             songs[i] = list.get(i).toString();
         }
         Settings settings = event.getClient().getSettingsFor(event.getGuild());
         long fintotal = total;
-        builder.setText((i1,i2) -> getQueueTitle(ah, event.getClient().getSuccess(), songs.length, fintotal, settings.getRepeatMode(), settings.getQueueType()))
+        builder.setText((i1, i2) -> getQueueTitle(ah, event.getClient().getSuccess(), songs.length, fintotal, settings.getRepeatMode(), settings.getQueueType()))
                 .setItems(songs)
                 .setUsers(event.getAuthor())
-                .setColor(event.getSelfMember().getColor())
-                ;
-        builder.build().paginate(event.getChannel(), pagenum);
+                .setColor(event.getSelfMember().getColor());
+        builder.build().paginate(event.getChannel(), 1); 
     }
-    
-    private String getQueueTitle(AudioHandler ah, String success, int songslength, long total, RepeatMode repeatmode, QueueType queueType)
-    {
+
+    private String getQueueTitle(AudioHandler ah, String success, int songslength, long total, RepeatMode repeatmode, QueueType queueType) {
         StringBuilder sb = new StringBuilder();
-        if(ah.getPlayer().getPlayingTrack()!=null)
-        {
+        if (ah.getPlayer().getPlayingTrack() != null) {
             sb.append(ah.getStatusEmoji()).append(" **")
                     .append(ah.getPlayer().getPlayingTrack().getInfo().title).append("**\n");
         }
         return FormatUtil.filter(sb.append(success).append(" Current Queue | ").append(songslength)
                 .append(" entries | `").append(TimeUtil.formatTime(total)).append("` ")
                 .append("| ").append(queueType.getEmoji()).append(" `").append(queueType.getUserFriendlyName()).append('`')
-                .append(repeatmode.getEmoji() != null ? " | "+repeatmode.getEmoji() : "").toString());
+                .append(repeatmode.getEmoji() != null ? " | " + repeatmode.getEmoji() : "").toString());
     }
 }
