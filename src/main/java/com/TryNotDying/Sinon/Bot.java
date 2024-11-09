@@ -22,6 +22,7 @@ import com.TryNotDying.Sinon.audio.AudioHandler;
 import com.TryNotDying.Sinon.audio.NowplayingHandler;
 import com.TryNotDying.Sinon.audio.PlayerManager;
 import com.TryNotDying.Sinon.gui.GUI;
+import com.TryNotDying.Sinon.gui.TerminalGUI; // Import TerminalGUI
 import com.TryNotDying.Sinon.playlist.PlaylistLoader;
 import com.TryNotDying.Sinon.settings.SettingsManager;
 import java.util.Objects;
@@ -29,6 +30,16 @@ import com.TryNotDying.Sinon.utils.YoutubeOauth2TokenHandler;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.ReadyEvent;
+import net.dv8tion.jda.api.events.ShutdownEvent;
+import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
+import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageDeleteEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Above import dependencies
@@ -49,7 +60,8 @@ public class Bot
     
     private boolean shuttingDown = false;
     private JDA jda;
-    
+    private ServerSocket serverSocket; // ServerSocket to listen for connections
+
     public Bot(EventWaiter waiter, BotConfig config, SettingsManager settings, GUI gui)
     {
         this.waiter = waiter;
@@ -160,5 +172,98 @@ public class Bot
     public void setJDA(JDA jda)
     {
         this.jda = jda;
+    }
+    
+    public void startTerminalServer() {
+        try {
+            serverSocket = new ServerSocket(12345); // Port number 12345
+            LOG.info("Terminal server started on port 12345.");
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept(); // Accept incoming connections
+                new Thread(new TerminalHandler(clientSocket, this)).start();
+            }
+        } catch (IOException e) {
+            LOGGER.error("Error starting terminal server: {}", e.getMessage(), e);
+        }
+    }
+
+    private class TerminalHandler implements Runnable {
+        private final Socket clientSocket;
+        private final Bot bot;
+
+        public TerminalHandler(Socket clientSocket, Bot bot) {
+            this.clientSocket = clientSocket;
+            this.bot = bot;
+        }
+
+        @Override
+        public void run() {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
+
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    String[] parts = inputLine.trim().toLowerCase().split("\\s+"); // Split by space
+                    String command = parts[0];
+
+                    switch (command) {
+                        case "start":
+                            // ... handle start command ...
+                            break;
+                        case "stop":
+                            // ... handle stop command ...
+                            break;
+                        case "status":
+                            // ... handle status command ...
+                            break;
+                        case "loadconfig":
+                            if (parts.length != 2) {
+                                out.println("Invalid command. Usage: loadconfig <config_file_path>");
+                                break;
+                            }
+                            String configFilePath = parts[1];
+                            try {
+                                bot.loadConfig(configFilePath); // Call your loadConfig method
+                                out.println("Configuration reloaded successfully.");
+                            } catch (BotConfigException ex) {
+                                out.println("Error loading configuration: " + ex.getMessage());
+                            }
+                            break;
+                        // ... (handle other commands)
+                    }
+                }
+            } catch (IOException e) {
+                LOGGER.error("Error handling terminal client connection: {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    public void loadConfig(String configFilePath) throws BotConfigException {
+        try {
+            // Load the new config file
+            Config newConfig = ConfigFactory.parseFile(new File(configFilePath));
+
+            // Update bot settings with the new config
+            // ... (Your code to load config values) ... 
+            // For example:
+            // botConfig.setToken(newConfig.getString("token"));
+            // botConfig.setPrefix(newConfig.getString("prefix"));
+            // ... (Load other settings) ...
+
+            // Apply the new settings to your bot 
+            // ... (Your code to apply settings to your bot) ...
+
+            // Log a success message
+            LOG.info("Configuration reloaded from: {}", configFilePath);
+        } catch (ConfigException ex) {
+            // Handle the exception
+            LOG.error("Error loading configuration file: {}", ex.getMessage(), ex);
+            throw new BotConfigException("Error loading configuration: " + ex.getMessage(), ex);
+        }
+    }
+    
+    public void sendMessageToTerminal(String message) {
+        SwingUtilities.invokeLater(() -> TerminalGUI.outputArea.append(message + "\n")); // Use SwingUtilities for thread safety
     }
 }
