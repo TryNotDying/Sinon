@@ -15,8 +15,10 @@ package com.TryNotDying.Sinon.commands.owner;
 
 import java.io.IOException;
 import java.io.InputStream;
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.owner;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import com.TryNotDying.Sinon.utils.OtherUtil;
 import net.dv8tion.jda.api.entities.Icon;

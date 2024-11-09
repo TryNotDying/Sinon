@@ -13,8 +13,10 @@
  */
 package com.TryNotDying.Sinon.commands.admin;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.admin;
 import com.TryNotDying.Sinon.commands.AdminCommand;
 import com.TryNotDying.Sinon.settings.Settings;
 import com.jagrosh.jdautilities.command.SlashCommand;

@@ -13,11 +13,13 @@
  */
 package com.TryNotDying.Sinon.commands.dj;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jdautilities.commons.utils.FinderUtil;
 import com.jagrosh.jdautilities.menu.OrderedMenu;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.audio.AudioHandler;
+import com.TryNotDying.Sinon.commands.dj;
 import com.TryNotDying.Sinon.commands.DJCommand;
 import com.TryNotDying.Sinon.utils.FormatUtil;
 import net.dv8tion.jda.api.Permission;

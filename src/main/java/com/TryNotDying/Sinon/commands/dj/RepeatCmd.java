@@ -13,8 +13,10 @@
  */
 package com.TryNotDying.Sinon.commands.dj;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.dj;
 import com.TryNotDying.Sinon.commands.DJCommand;
 import com.TryNotDying.Sinon.settings.RepeatMode;
 import com.TryNotDying.Sinon.settings.Settings;

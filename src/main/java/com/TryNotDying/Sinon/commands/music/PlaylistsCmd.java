@@ -14,8 +14,10 @@
 package com.TryNotDying.Sinon.commands.music;
 
 import java.util.List;
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.music;
 import com.TryNotDying.Sinon.commands.MusicCommand;
 import com.jagrosh.jdautilities.command.SlashCommand;
 import net.dv8tion.jda.api.Permission;

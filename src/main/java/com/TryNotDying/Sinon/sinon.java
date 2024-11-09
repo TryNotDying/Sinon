@@ -4,7 +4,6 @@ import com.jagrosh.jdautilities.command.CommandClient;
 import com.jagrosh.jdautilities.command.CommandClientBuilder;
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.TryNotDying.Sinon.utils.ColorPalette; // Import ColorPalette
-import com.TryNotDying.Sinon.commands.AboutCommand;
 import com.TryNotDying.Sinon.commands.PingCommand;
 import com.TryNotDying.Sinon.commands.admin.*;
 import com.TryNotDying.Sinon.commands.dj.*;

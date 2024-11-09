@@ -13,9 +13,11 @@
  */
 package com.TryNotDying.Sinon.commands.owner;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jdautilities.commons.JDAUtilitiesInfo;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.owner;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import com.TryNotDying.Sinon.utils.OtherUtil;
 import com.sedmelluq.discord.lavaplayer.tools.PlayerLibrary;

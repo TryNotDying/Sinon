@@ -13,6 +13,7 @@
  */
 package com.TryNotDying.Sinon.commands;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.settings.Settings;

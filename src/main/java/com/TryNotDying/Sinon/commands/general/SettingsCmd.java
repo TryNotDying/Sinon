@@ -13,9 +13,11 @@
  */
 package com.TryNotDying.Sinon.commands.general;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.Command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.admin;
 import com.TryNotDying.Sinon.settings.QueueType;
 import com.TryNotDying.Sinon.settings.RepeatMode;
 import com.TryNotDying.Sinon.settings.Settings;

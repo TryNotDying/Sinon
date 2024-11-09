@@ -13,9 +13,11 @@
  */
 package com.TryNotDying.Sinon.commands.dj;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.audio.AudioHandler;
+import com.TryNotDying.Sinon.commands.dj;
 import com.TryNotDying.Sinon.commands.DJCommand;
 import com.jagrosh.jdautilities.command.SlashCommand;
 import net.dv8tion.jda.api.interactions.commands.OptionType;

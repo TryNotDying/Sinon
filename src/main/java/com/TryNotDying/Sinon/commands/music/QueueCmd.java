@@ -15,11 +15,13 @@ package com.TryNotDying.Sinon.commands.music;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jdautilities.menu.Paginator;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.audio.AudioHandler;
 import com.TryNotDying.Sinon.audio.QueuedTrack;
+import com.TryNotDying.Sinon.commands.music;
 import com.TryNotDying.Sinon.commands.MusicCommand;
 import com.TryNotDying.Sinon.settings.QueueType;
 import com.TryNotDying.Sinon.settings.RepeatMode;

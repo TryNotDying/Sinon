@@ -13,6 +13,7 @@
  */
 package com.TryNotDying.Sinon.commands.music;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.SlashCommand;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import net.dv8tion.jda.api.Permission;
@@ -27,6 +28,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.TryNotDying.Sinon.audio.AudioHandler;
 import com.TryNotDying.Sinon.audio.QueuedTrack;
+import com.TryNotDying.Sinon.commands.music;
 import com.TryNotDying.Sinon.commands.MusicCommand;
 import com.TryNotDying.Sinon.playlist.PlaylistLoader.Playlist;
 import com.TryNotDying.Sinon.utils.FormatUtil;

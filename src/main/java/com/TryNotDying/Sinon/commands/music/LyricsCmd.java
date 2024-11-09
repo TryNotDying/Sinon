@@ -13,10 +13,12 @@
  */
 package com.TryNotDying.Sinon.commands.music;
 
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jlyrics.LyricsClient;
 import com.TryNotDying.Sinon.Bot;
 import com.TryNotDying.Sinon.audio.AudioHandler;
+import com.TryNotDying.Sinon.commands.music;
 import com.TryNotDying.Sinon.commands.MusicCommand;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;

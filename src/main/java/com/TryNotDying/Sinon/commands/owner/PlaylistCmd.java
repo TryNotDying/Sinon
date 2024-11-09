@@ -15,9 +15,11 @@ package com.TryNotDying.Sinon.commands.owner;
 
 import java.io.IOException;
 import java.util.List;
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.Command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.owner;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import com.TryNotDying.Sinon.playlist.PlaylistLoader.Playlist;
 import com.jagrosh.jdautilities.command.SlashCommand;

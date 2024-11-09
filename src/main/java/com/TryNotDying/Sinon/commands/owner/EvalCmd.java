@@ -15,8 +15,10 @@ package com.TryNotDying.Sinon.commands.owner;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
+import com.jagrosh.jdautilities.command;
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.TryNotDying.Sinon.Bot;
+import com.TryNotDying.Sinon.commands.owner;
 import com.TryNotDying.Sinon.commands.OwnerCommand;
 import net.dv8tion.jda.api.entities.ChannelType;
 import com.jagrosh.jdautilities.command.SlashCommand;
