@@ -7,7 +7,7 @@
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -37,17 +37,19 @@ public class NowplayingHandler
 {
     private final Bot bot;
     private final HashMap<Long,Pair<Long,Long>> lastNP; // guild -> channel,message
-    
+    private long lastUpdateTime = 0;
+
     public NowplayingHandler(Bot bot)
     {
         this.bot = bot;
         this.lastNP = new HashMap<>();
-    }
-    
-    public void init()
-    {
-        if(!bot.getConfig().useNPImages())
-            bot.getThreadpool().scheduleWithFixedDelay(() -> updateAll(), 0, 5, TimeUnit.SECONDS);
+
+        // Start the timer ONLY if useNPImages is false
+        if (!bot.getConfig().useNPImages()) {
+            // Use scheduleAtFixedRate for more precise time updates
+            // Update interval changed to 3 seconds
+            bot.getThreadpool().scheduleAtFixedRate(() -> updateAll(), 0, 3, TimeUnit.SECONDS);
+        }
     }
     
     public void setLastNPMessage(Message m)
@@ -85,13 +87,26 @@ public class NowplayingHandler
                 msg = handler.getNoMusicPlaying(bot.getJDA());
                 toRemove.add(guildId);
             }
-            try 
-            {
-                tc.editMessageById(pair.getValue(), msg).queue(m->{}, t -> lastNP.remove(guildId));
-            } 
-            catch(Exception e) 
-            {
-                toRemove.add(guildId);
+
+            // Update the message ONLY if useNPImages is false
+            if (!bot.getConfig().useNPImages()) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastUpdateTime > 3000) { // Time difference check adjusted for 3-second interval
+                    lastUpdateTime = currentTime; // Reset lastUpdateTime
+
+                    try {
+                        tc.editMessageById(pair.getValue(), msg).queue(m -> {
+                        }, t -> {
+                            lastNP.remove(guildId); 
+                            System.err.println("Error updating now playing message for guild: " + guildId);
+                            System.err.println(t.getMessage());
+                        });
+                    } catch (Exception e) {
+                        lastNP.remove(guildId); 
+                        System.err.println("Exception during now playing message update for guild: " + guildId);
+                        System.err.println(e.getMessage());
+                    }
+                }
             }
         }
         toRemove.forEach(id -> lastNP.remove(id));
